@@ -91,8 +91,16 @@ class DistrictDatabase:
                 poll_results_percent[party] * self.get_sum_of_votes() / 100
             )
 
-        while not self.are_results_approx_equal(
-            self.get_current_overall_results(), poll_results, epsilon_percent
+        # Max iterations in while loop
+        MAX_ITERATIONS = 1000
+
+        # Scale results in all districts until current results are almost equal to poll results
+        it = 0
+        while (
+            not self.are_results_approx_equal(
+                self.get_current_overall_results(), poll_results, epsilon_percent
+            )
+            and it < MAX_ITERATIONS
         ):
             scale_dict = {}
             current_results = self.get_current_overall_results()
@@ -101,6 +109,7 @@ class DistrictDatabase:
                 scale_dict[party] = poll_results[party] / current_results[party]
 
             self.scale_results_in_all_districts(scale_dict)
+            it += 1
 
     def are_results_approx_equal(self, results1, results2, epsilon_percent):
         epsilon = epsilon_percent * self.get_sum_of_votes() / 100
