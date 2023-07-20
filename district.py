@@ -1,6 +1,6 @@
 class District:
-    def __init__(self, name, id, n_seats, previous_results: None,
-                 number_of_votes: None):
+    def __init__(self, name, id, n_seats, previous_results=None,
+                 number_of_votes=None):
         self._name = name
         self._id = id
         self._n_seats = n_seats
@@ -42,7 +42,8 @@ class District:
     # Scale votes by given scale, scale is a dict {party: scale}
     def scale_votes(self, scale_dict):
         for party in self._results:
-            self._results[party] *= scale_dict[party]
+            if party in scale_dict:
+                self._results[party] *= scale_dict[party]
 
     # If votes for all parties do not sum up to sum of votes,
     # which was set, scale them
