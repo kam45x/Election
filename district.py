@@ -1,9 +1,8 @@
 class District:
-    def __init__(self, name, id, n_seats, previous_results=None,
-                 number_of_votes=None):
+    def __init__(self, name, id, n_seats, previous_results=None, number_of_votes=None):
         self._name = name
         self._id = id
-        self._n_seats = n_seats
+        self._n_seats = int(n_seats)
         self._sum_of_votes = 0
         self._results = {}
 
@@ -51,3 +50,25 @@ class District:
         if self._sum_of_votes > 0:
             scale = self._sum_of_votes / sum(self._results.values())
             self.scale_votes({party: scale for party in self._results})
+
+    def get_number_of_mandates_dhont(self, parties_over_threshold):
+        # Initialize mandates
+        mandates = {party: 0 for party in parties_over_threshold}
+
+        # Initialize last divisors
+        last_divisors = {party: 1 for party in parties_over_threshold}
+
+        # Extract results for parties over threshold
+        results_dhont = {
+            party: self._results[party] for party in parties_over_threshold
+        }
+
+        # Calculate number of mandates
+        for i in range(self._n_seats):
+            party_max_value = max(results_dhont, key=results_dhont.get)
+            mandates[party_max_value] += 1
+            last_divisors[party_max_value] += 1
+            results_dhont[party_max_value] = (
+                self._results[party_max_value] / last_divisors[party_max_value]
+            )
+        return mandates
