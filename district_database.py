@@ -3,6 +3,8 @@ from district import District
 
 LIST_OF_PARTIES = ["PiS", "KO", "Lewica", "PSL", "Konfederacja", "MN", "Inne"]
 OTHER_PARTIES = ["KWAZEiR", "Prawica", "Skuteczni", "Bezpartyjni"]
+PARTY_TRESHOLD = 0.05
+COALITION_TRESHOLD = 0.08
 
 
 class DistrictDatabase:
@@ -117,3 +119,36 @@ class DistrictDatabase:
             if abs(results1[party] - results2[party]) > epsilon:
                 return False
         return True
+
+    def get_parties_over_threshold(self):
+        parties_over_threshold = []
+        for party in LIST_OF_PARTIES:
+            if (
+                party == "PSL"
+                and self.get_current_overall_results()[party]
+                > COALITION_TRESHOLD * self.get_sum_of_votes()
+            ):
+                parties_over_threshold.append(party)
+            elif party == "MN":
+                parties_over_threshold.append(party)
+            elif party == "Inne":
+                continue
+            elif (
+                self.get_current_overall_results()[party]
+                > PARTY_TRESHOLD * self.get_sum_of_votes()
+            ):
+                parties_over_threshold.append(party)
+        return parties_over_threshold
+
+    def get_number_of_mandates(self):
+        mandates = {party: 0 for party in LIST_OF_PARTIES}
+        parties_over_threshold = self.get_parties_over_threshold()
+
+        for district in self._districts.values():
+            district_mandates = district.get_number_of_mandates_dhont(
+                parties_over_threshold
+            )
+            for party in district_mandates.keys():
+                mandates[party] += district_mandates[party]
+
+        return mandates
