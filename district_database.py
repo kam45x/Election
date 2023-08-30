@@ -8,24 +8,24 @@ COALITION_TRESHOLD = 0.08
 
 
 class DistrictDatabase:
-    def __init__(self, districts_path=None, previous_election_path=None):
+    def __init__(self, districts_path=None, parlamentary2019_election_path=None):
         self._districts = {}
         self._was_loaded = False
 
-        if districts_path is not None and previous_election_path is not None:
-            self.load_database(districts_path, previous_election_path)
+        if districts_path is not None and parlamentary2019_election_path is not None:
+            self.load_database(districts_path, parlamentary2019_election_path)
             self._was_loaded = True
 
-    def load_database(self, districts_path, previous_election_path):
+    def load_database(self, districts_path, parlamentary2019_election_path):
         with open(districts_path, "r") as districts_file, open(
-            previous_election_path, "r"
-        ) as previous_election_file:
-            self._read_database_from_file(districts_file, previous_election_file)
+            parlamentary2019_election_path, "r"
+        ) as parlamentary2019_election_file:
+            self._read_database_from_file(districts_file, parlamentary2019_election_file)
         self._was_loaded = True
 
-    def _read_database_from_file(self, districts_file, previous_election_file):
+    def _read_database_from_file(self, districts_file, parlamentary2019_election_path):
         self._read_disctricts(districts_file)
-        self._read_previous_election(previous_election_file)
+        self._read_parlamentary_election(parlamentary2019_election_path)
 
     def _read_disctricts(self, districts_file):
         reader = csv.DictReader(districts_file, delimiter=";")
@@ -34,8 +34,8 @@ class DistrictDatabase:
                 row["Siedziba OKW"], row["Numer okręgu"], row["Liczba mandatów"]
             )
 
-    def _read_previous_election(self, previous_election_file):
-        reader = csv.DictReader(previous_election_file, delimiter=";")
+    def _read_parlamentary_election(self, parlamentary2019_election_path):
+        reader = csv.DictReader(parlamentary2019_election_path, delimiter=";")
         for row in reader:
             district_id = row["Numer okręgu"]
 
