@@ -35,8 +35,11 @@ class District:
             return 0
         return self._results[party]
 
-    def add_votes(self, party, votes):
+    def add_party(self, party, votes):
         self._results[party] = votes
+
+    def add_votes(self, party, votes):
+        self._results[party] += votes
 
     # Scale votes by given scale, scale is a dict {party: scale}
     def scale_votes(self, scale_dict):

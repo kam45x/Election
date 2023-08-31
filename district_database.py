@@ -8,24 +8,51 @@ COALITION_TRESHOLD = 0.08
 
 
 class DistrictDatabase:
-    def __init__(self, districts_path=None, parlamentary2019_election_path=None):
+    def __init__(
+        self,
+        districts_path=None,
+        parlamentary2019_election_path=None,
+        presidential2020_election_path=None,
+    ):
         self._districts = {}
-        self._was_loaded = False
 
-        if districts_path is not None and parlamentary2019_election_path is not None:
-            self.load_database(districts_path, parlamentary2019_election_path)
-            self._was_loaded = True
+        if (
+            districts_path is not None
+            and parlamentary2019_election_path is not None
+            and presidential2020_election_path is not None
+        ):
+            self.load_database(
+                districts_path,
+                parlamentary2019_election_path,
+                presidential2020_election_path,
+            )
 
-    def load_database(self, districts_path, parlamentary2019_election_path):
+    def load_database(
+        self,
+        districts_path,
+        parlamentary2019_election_path,
+        presidential2020_election_path,
+    ):
         with open(districts_path, "r") as districts_file, open(
             parlamentary2019_election_path, "r"
-        ) as parlamentary2019_election_file:
-            self._read_database_from_file(districts_file, parlamentary2019_election_file)
-        self._was_loaded = True
+        ) as parlamentary2019_election_file, open(
+            presidential2020_election_path, "r"
+        ) as presidential2020_election_file:
+            self._read_database_from_file(
+                districts_file,
+                parlamentary2019_election_file,
+                presidential2020_election_file,
+            )
 
-    def _read_database_from_file(self, districts_file, parlamentary2019_election_path):
+    def _read_database_from_file(
+        self,
+        districts_file,
+        parlamentary2019_election_file,
+        presidential2020_election_file,
+    ):
         self._read_disctricts(districts_file)
-        self._read_parlamentary_election(parlamentary2019_election_path)
+        self._read_parlamentary_election(parlamentary2019_election_file)
+        self._load_holownia(presidential2020_election_file)
 
     def _read_disctricts(self, districts_file):
         reader = csv.DictReader(districts_file, delimiter=";")
@@ -34,8 +61,8 @@ class DistrictDatabase:
                 row["Siedziba OKW"], row["Numer okręgu"], row["Liczba mandatów"]
             )
 
-    def _read_parlamentary_election(self, parlamentary2019_election_path):
-        reader = csv.DictReader(parlamentary2019_election_path, delimiter=";")
+    def _read_parlamentary_election(self, parlamentary2019_election_file):
+        reader = csv.DictReader(parlamentary2019_election_file, delimiter=";")
         for row in reader:
             district_id = row["Numer okręgu"]
 
@@ -51,15 +78,51 @@ class DistrictDatabase:
                     for other_party in OTHER_PARTIES:
                         if row[other_party] != "":
                             other_votes += int(row[other_party])
-                    self._districts[district_id].add_votes("Inne", other_votes)
+                    self._districts[district_id].add_party("Inne", other_votes)
                 else:
                     if row[party] != "":
-                        self._districts[district_id].add_votes(party, int(row[party]))
+                        self._districts[district_id].add_party(party, int(row[party]))
                     else:
-                        self._districts[district_id].add_votes(party, 0)
+                        self._districts[district_id].add_party(party, 0)
 
             # Scale votes to 100% if they do not sum up to sum of votes
             self._districts[district_id].rescale_votes_to_100_percent()
+
+    def _load_holownia(self, presidential2020_election_file):
+        POLL_PL2050_APRIL2023_PERCENT = 8.6
+        POLL_PSL_APRIL2023_PERCENT = 5.8
+
+        reader = csv.DictReader(presidential2020_election_file, delimiter=";")
+        holownia_votes_districts = {
+            row["Numer okręgu"]: int(row["Szymon Franciszek HOŁOWNIA"])
+            for row in reader
+        }
+        sum_of_votes_holownia = sum(holownia_votes_districts.values())
+        sum_of_votes_psl = self.get_current_overall_results()["PSL"]
+
+        # Rescale PSL votes to make space for PL2050 votes (approx by Holownia votes in presidetial
+        # election) to create an electoral profile of Trzecia Droga
+        scale_dict = {}
+        scale_dict["PSL"] = POLL_PSL_APRIL2023_PERCENT / (
+            POLL_PSL_APRIL2023_PERCENT + POLL_PL2050_APRIL2023_PERCENT
+        )
+        self.scale_results_in_all_districts(scale_dict)
+
+        # Add PL2050 votes (they must sum up with PSL votes to PSL result in 2019 election)
+        for district_id in holownia_votes_districts.keys():
+            self._districts[district_id].add_votes(
+                "PSL",
+                holownia_votes_districts[district_id]
+                * (sum_of_votes_psl / sum_of_votes_holownia)
+                * (
+                    POLL_PL2050_APRIL2023_PERCENT
+                    / (POLL_PL2050_APRIL2023_PERCENT + POLL_PSL_APRIL2023_PERCENT)
+                ),
+            )
+
+        # Rescale votes to 100% in all districts
+        for district in self._districts.values():
+            district.rescale_votes_to_100_percent()
 
     def get_sum_of_votes(self):
         sum = 0
@@ -108,7 +171,10 @@ class DistrictDatabase:
             current_results = self.get_current_overall_results()
 
             for party in poll_results_percent.keys():
-                scale_dict[party] = poll_results[party] / current_results[party]
+                if current_results[party] != 0:
+                    scale_dict[party] = poll_results[party] / current_results[party]
+                else:
+                    scale_dict[party] = 1
 
             self.scale_results_in_all_districts(scale_dict)
             it += 1
@@ -136,6 +202,7 @@ class DistrictDatabase:
             elif (
                 self.get_current_overall_results()[party]
                 > PARTY_TRESHOLD * self.get_sum_of_votes()
+                and party != "PSL"
             ):
                 parties_over_threshold.append(party)
         return parties_over_threshold
