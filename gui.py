@@ -46,7 +46,7 @@ class ElectionCalculatorWindow(QMainWindow):
             "PiS": float(self.ui.lineEdit_PiS.text()),
             "KO": float(self.ui.lineEdit_KO.text()),
             "Lewica": float(self.ui.lineEdit_Lewica.text()),
-            "PSL": float(self.ui.lineEdit_TD.text()),
+            "TD": float(self.ui.lineEdit_TD.text()),
             "Konfederacja": float(self.ui.lineEdit_Konfederacja.text()),
             "MN": 0.17,
         }
@@ -88,7 +88,7 @@ class ElectionCalculatorWindow(QMainWindow):
         self.ui.label_Lewica.setText(
             f"{self.database.get_number_of_mandates()['Lewica']}"
         )
-        self.ui.label_TD.setText(f"{self.database.get_number_of_mandates()['PSL']}")
+        self.ui.label_TD.setText(f"{self.database.get_number_of_mandates()['TD']}")
         self.ui.label_Konfederacja.setText(
             f"{self.database.get_number_of_mandates()['Konfederacja']}"
         )

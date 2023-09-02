@@ -77,6 +77,8 @@ class DistrictDatabase:
                         if row[other_party] != "":
                             other_votes += int(row[other_party])
                     self._districts[district_id].add_party("Inne", other_votes)
+                elif party == "TD":
+                    self._districts[district_id].add_party("TD", int(row["PSL"]))
                 else:
                     if row[party] != "":
                         self._districts[district_id].add_party(party, int(row[party]))
@@ -93,12 +95,12 @@ class DistrictDatabase:
             for row in reader
         }
         sum_of_votes_holownia = sum(holownia_votes_districts.values())
-        sum_of_votes_psl = self.get_current_overall_results()["PSL"]
+        sum_of_votes_psl = self.get_current_overall_results()["TD"]
 
         # Rescale PSL votes to make space for PL2050 votes (approx by Holownia votes in presidetial
-        # election) to create an electoral profile of Trzecia Droga
+        # election) to create an electoral profile of TD
         scale_dict = {}
-        scale_dict["PSL"] = POLL_PSL_APRIL2023_PERCENT / (
+        scale_dict["TD"] = POLL_PSL_APRIL2023_PERCENT / (
             POLL_PSL_APRIL2023_PERCENT + POLL_PL2050_APRIL2023_PERCENT
         )
         self.scale_results_in_all_districts(scale_dict)
@@ -106,7 +108,7 @@ class DistrictDatabase:
         # Add PL2050 votes (they must sum up with PSL votes to PSL result in 2019 election)
         for district_id in holownia_votes_districts.keys():
             self._districts[district_id].add_votes(
-                "PSL",
+                "TD",
                 holownia_votes_districts[district_id]
                 * (sum_of_votes_psl / sum_of_votes_holownia)
                 * (
@@ -193,7 +195,7 @@ class DistrictDatabase:
         parties_over_threshold = []
         for party in LIST_OF_PARTIES:
             if (
-                party == "PSL"
+                party == "TD"
                 and self.get_current_overall_results()[party]
                 > COALITION_TRESHOLD * self.get_sum_of_votes()
             ):
@@ -205,7 +207,7 @@ class DistrictDatabase:
             elif (
                 self.get_current_overall_results()[party]
                 > PARTY_TRESHOLD * self.get_sum_of_votes()
-                and party != "PSL"
+                and party != "TD"
             ):
                 parties_over_threshold.append(party)
         return parties_over_threshold
