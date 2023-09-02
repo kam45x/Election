@@ -3,6 +3,8 @@ from district import District
 
 LIST_OF_PARTIES = ["PiS", "KO", "Lewica", "PSL", "Konfederacja", "MN", "Inne"]
 OTHER_PARTIES = ["KWAZEiR", "Prawica", "Skuteczni", "Bezpartyjni"]
+PIS_KONFEDERACJA = ["PiS", "Konfederacja"]
+OPPOSITION = ["KO", "Lewica", "PSL"]
 PARTY_TRESHOLD = 0.05
 COALITION_TRESHOLD = 0.08
 
@@ -53,6 +55,7 @@ class DistrictDatabase:
         self._read_disctricts(districts_file)
         self._read_parlamentary_election(parlamentary2019_election_file)
         self._load_holownia(presidential2020_election_file)
+        self.save_all_districts_state()
 
     def _read_disctricts(self, districts_file):
         reader = csv.DictReader(districts_file, delimiter=";")
@@ -123,6 +126,14 @@ class DistrictDatabase:
         # Rescale votes to 100% in all districts
         for district in self._districts.values():
             district.rescale_votes_to_100_percent()
+
+    def save_all_districts_state(self):
+        for district in self._districts.values():
+            district.save_state()
+
+    def reset_all_districts_state(self):
+        for district in self._districts.values():
+            district.reset()
 
     def get_sum_of_votes(self):
         sum = 0
@@ -219,3 +230,12 @@ class DistrictDatabase:
                 mandates[party] += district_mandates[party]
 
         return mandates
+
+    def get_mandates_of_parties(self, parties):
+        mandates_parties = 0
+
+        for party, mandates in self.get_number_of_mandates().items():
+            if party in parties:
+                mandates_parties += mandates
+
+        return mandates_parties

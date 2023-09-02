@@ -1,3 +1,6 @@
+import copy
+
+
 class District:
     def __init__(self, name, id, n_seats, previous_results=None, number_of_votes=None):
         self._name = name
@@ -75,3 +78,9 @@ class District:
                 self._results[party_max_value] / last_divisors[party_max_value]
             )
         return mandates
+
+    def save_state(self):
+        self._saved_results = copy.deepcopy(self._results)
+
+    def reset(self):
+        self._results = copy.deepcopy(self._saved_results)

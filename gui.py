@@ -15,12 +15,18 @@ class ElectionCalculatorWindow(QMainWindow):
         super().__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self._init_mandates_chart()
-        self._make_new_database()
+        self.database = DistrictDatabase(
+            "okregi_sejm.csv",
+            "wyniki_gl_na_listy_po_okregach_sejm.csv",
+            "districts_results_2020_AUTO.csv",
+        )
 
+        self.__init_mandates_chart()
+
+        # Monitor button click
         self.ui.pushButton.clicked.connect(self._calculate_mandates)
 
-    def _init_mandates_chart(self):
+    def __init_mandates_chart(self):
         self.scene = QGraphicsScene()
         self.ui.graphicsView.setScene(self.scene)
 
@@ -35,7 +41,7 @@ class ElectionCalculatorWindow(QMainWindow):
         self.y = (self.view_rect.height() - self.chart_rect.height()) / 2
 
     def _calculate_mandates(self):
-        self._make_new_database()
+        self.database.reset_all_districts_state()
         poll_results_percent = {
             "PiS": float(self.ui.lineEdit_PiS.text()),
             "KO": float(self.ui.lineEdit_KO.text()),
@@ -53,13 +59,6 @@ class ElectionCalculatorWindow(QMainWindow):
 
         self._update_mandates_chart()
         self._update_mandate_labels()
-
-    def _make_new_database(self):
-        self.database = DistrictDatabase(
-            "okregi_sejm.csv",
-            "wyniki_gl_na_listy_po_okregach_sejm.csv",
-            "districts_results_2020_AUTO.csv",
-        )
 
     def _update_mandates_chart(self):
         self.scene.clear()
