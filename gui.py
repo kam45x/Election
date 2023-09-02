@@ -4,7 +4,7 @@ import sys
 
 from ui_election_calculator import Ui_MainWindow
 from district_database import DistrictDatabase
-from district_database import PIS_KONFEDERACJA, OPPOSITION
+from constants import PIS_KONFEDERACJA, OPPOSITION
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt

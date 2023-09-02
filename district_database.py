@@ -1,12 +1,7 @@
 import csv
 from district import District
 
-LIST_OF_PARTIES = ["PiS", "KO", "Lewica", "PSL", "Konfederacja", "MN", "Inne"]
-OTHER_PARTIES = ["KWAZEiR", "Prawica", "Skuteczni", "Bezpartyjni"]
-PIS_KONFEDERACJA = ["PiS", "Konfederacja"]
-OPPOSITION = ["KO", "Lewica", "PSL"]
-PARTY_TRESHOLD = 0.05
-COALITION_TRESHOLD = 0.08
+from constants import *
 
 
 class DistrictDatabase:
@@ -92,9 +87,6 @@ class DistrictDatabase:
             self._districts[district_id].rescale_votes_to_100_percent()
 
     def _load_holownia(self, presidential2020_election_file):
-        POLL_PL2050_APRIL2023_PERCENT = 8.6
-        POLL_PSL_APRIL2023_PERCENT = 5.8
-
         reader = csv.DictReader(presidential2020_election_file, delimiter=";")
         holownia_votes_districts = {
             row["Numer okręgu"]: int(row["Szymon Franciszek HOŁOWNIA"])
