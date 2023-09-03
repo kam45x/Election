@@ -204,6 +204,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_4.addWidget(self.lineEdit_TD)
 
+        self.label_error = QLabel(self.centralwidget)
+        self.label_error.setObjectName(u"label_error")
+        self.label_error.setGeometry(QRect(40, 340, 271, 20))
+        self.label_error.setAlignment(Qt.AlignCenter)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
@@ -250,5 +254,6 @@ class Ui_MainWindow(object):
         self.lineEdit_KO.setText(QCoreApplication.translate("MainWindow", u"0", None))
         self.label_10.setText(QCoreApplication.translate("MainWindow", u"<html><head/><body><p><span style=\" font-weight:600; color:#33d17a;\">Trzecia Droga</span></p></body></html>", None))
         self.lineEdit_TD.setText(QCoreApplication.translate("MainWindow", u"0", None))
+        self.label_error.setText("")
     # retranslateUi
 
