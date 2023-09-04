@@ -144,7 +144,10 @@ class ElectionCalculatorWindow(QMainWindow):
 
     def _select_district(self, item):
         self.ui.stackedWidget.setCurrentIndex(1)
-        self.ui.label_district.setText(f"{item.district.get_name()}")
+        # Set district name
+        self.ui.label_district.setText(
+            f"{item.district.get_id()}. {item.district.get_name()}"
+        )
 
         n_parties = len(self.database.get_number_of_mandates())
         # Ignore "Inne" party
@@ -165,7 +168,7 @@ class ElectionCalculatorWindow(QMainWindow):
         )
 
         # Column width
-        self.ui.tableWidget_results.setColumnWidth(0, 120)
+        self.ui.tableWidget_results.setColumnWidth(0, 116)
         self.ui.tableWidget_results.setColumnWidth(1, 200)
         self.ui.tableWidget_results.setColumnWidth(2, 80)
         self.ui.tableWidget_results.setColumnWidth(3, 80)
@@ -184,13 +187,13 @@ class ElectionCalculatorWindow(QMainWindow):
                         PARTY_COLORS[party][1],
                         PARTY_COLORS[party][2],
                     )
-                ) # Set background party color
+                )  # Set background party color
                 self.ui.tableWidget_results.setItem(row, 0, party_item)
 
                 leader_item = QTableWidgetItem(
                     f"{item.district.get_list_leader(party)}"
                 )
-                leader_item.setTextAlignment(4) # Center text
+                leader_item.setTextAlignment(4)  # Center text
                 self.ui.tableWidget_results.setItem(row, 1, leader_item)
 
                 results_item = QTableWidgetItem(f"{round(percent, 1)}%")
