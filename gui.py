@@ -1,10 +1,12 @@
-from PySide2.QtWidgets import QApplication, QMainWindow
+from PySide2.QtWidgets import QApplication, QMainWindow, QListWidgetItem
 from PySide2.QtWidgets import QGraphicsScene, QGraphicsProxyWidget
+from PySide2.QtWidgets import QTableWidgetItem
+from PySide2.QtGui import QColor, QFont
 import sys
 
 from ui_election_calculator import Ui_MainWindow
 from district_database import DistrictDatabase
-from constants import PIS_KONFEDERACJA, OPPOSITION
+from constants import *
 
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
@@ -19,8 +21,10 @@ class ElectionCalculatorWindow(QMainWindow):
             "okregi_sejm.csv",
             "wyniki_gl_na_listy_po_okregach_sejm.csv",
             "districts_results_2020_AUTO.csv",
+            "jedynki.csv",
         )
         self.__init_mandates_chart()
+        self.__init_list_of_distrcits()
 
         # Monitor button click
         self.ui.pushButton.clicked.connect(self._calculate_mandates)
@@ -39,6 +43,14 @@ class ElectionCalculatorWindow(QMainWindow):
         self.x = (self.view_rect.width() - self.chart_rect.width()) / 2
         self.y = (self.view_rect.height() - self.chart_rect.height()) / 2
 
+    def __init_list_of_distrcits(self):
+        self.ui.stackedWidget.setCurrentIndex(0)
+        for district in self.database.get_districts():
+            item = QListWidgetItem(f"{district}")
+            item.district = district
+            self.ui.districts.addItem(item)
+        self.ui.districts.itemClicked.connect(self._select_district)
+
     def _calculate_mandates(self):
         self._reset()
 
@@ -52,7 +64,9 @@ class ElectionCalculatorWindow(QMainWindow):
                 "MN": 0.17,
             }
         except ValueError:
-            self.ui.label_error.setText("<b><font color='red'>BŁĄD: Wprowadź poprawne wartości!<b></font>")
+            self.ui.label_error.setText(
+                "<b><font color='red'>BŁĄD: Wprowadź poprawne wartości!<b></font>"
+            )
             return
 
         # Sum can be larger than 100% (because of MN) - it wil be rescaled
@@ -62,7 +76,9 @@ class ElectionCalculatorWindow(QMainWindow):
         self.ui.textBrowser.setText(f"{round(poll_results_percent['Inne'], 1)}")
 
         if poll_results_percent["Inne"] < 0:
-            self.ui.label_error.setText("<b><font color='red'>BŁĄD: Suma przekracza 100%!<b></font>")
+            self.ui.label_error.setText(
+                "<b><font color='red'>BŁĄD: Suma przekracza 100%!<b></font>"
+            )
             return
 
         self.database.simulate_poll_results(poll_results_percent, 0.01)
@@ -91,16 +107,24 @@ class ElectionCalculatorWindow(QMainWindow):
         self.scene.addItem(self.proxy)
 
     def _update_mandate_labels(self):
-        self.ui.label_PiS.setText(f"<font color='blue'>{self.database.get_number_of_mandates()['PiS']}</font>")
-        self.ui.label_KO.setText(f"<font color='orange'>{self.database.get_number_of_mandates()['KO']}</font>")
+        self.ui.label_PiS.setText(
+            f"<font color='blue'>{self.database.get_number_of_mandates()['PiS']}</font>"
+        )
+        self.ui.label_KO.setText(
+            f"<font color='orange'>{self.database.get_number_of_mandates()['KO']}</font>"
+        )
         self.ui.label_Lewica.setText(
             f"<font color='red'>{self.database.get_number_of_mandates()['Lewica']}</font>"
         )
-        self.ui.label_TD.setText(f"<font color='green'>{self.database.get_number_of_mandates()['TD']}</font>")
+        self.ui.label_TD.setText(
+            f"<font color='green'>{self.database.get_number_of_mandates()['TD']}</font>"
+        )
         self.ui.label_Konfederacja.setText(
             f"{self.database.get_number_of_mandates()['Konfederacja']}"
         )
-        self.ui.label_MN.setText(f"<font color='grey'>{self.database.get_number_of_mandates()['MN']}</font>")
+        self.ui.label_MN.setText(
+            f"<font color='grey'>{self.database.get_number_of_mandates()['MN']}</font>"
+        )
 
         mandates_PiSKonfederacja = self.database.get_mandates_of_parties(
             PIS_KONFEDERACJA
@@ -118,9 +142,74 @@ class ElectionCalculatorWindow(QMainWindow):
         else:
             self.ui.label_Opposition.setText(f"{mandates_Opposition}")
 
+    def _select_district(self, item):
+        self.ui.stackedWidget.setCurrentIndex(1)
+        self.ui.label_district.setText(f"{item.district.get_name()}")
+
+        n_parties = len(self.database.get_number_of_mandates())
+        # Ignore "Inne" party
+        self.ui.tableWidget_results.setRowCount(n_parties - 1)
+        self.ui.tableWidget_results.setColumnCount(4)
+        self.ui.tableWidget_results.setHorizontalHeaderLabels(
+            ["Partia", "Nr 1 na liście", "Poparcie", "Mandaty"]
+        )
+
+        parties_mandates = item.district.get_number_of_mandates()
+        # Sort parties by results
+        parties_results_percent = dict(
+            sorted(
+                item.district.get_results_percent().items(),
+                key=lambda item_: item_[1],
+                reverse=True,
+            )
+        )
+
+        # Column width
+        self.ui.tableWidget_results.setColumnWidth(0, 120)
+        self.ui.tableWidget_results.setColumnWidth(1, 200)
+        self.ui.tableWidget_results.setColumnWidth(2, 80)
+        self.ui.tableWidget_results.setColumnWidth(3, 80)
+
+        row = 0
+        for party, percent in parties_results_percent.items():
+            if party != "Inne":
+                party_item = QTableWidgetItem(f"{party}")
+                # Bold font for party name
+                font = QFont()
+                font.setBold(True)
+                party_item.setFont(font)
+                party_item.setBackground(
+                    QColor(
+                        PARTY_COLORS[party][0],
+                        PARTY_COLORS[party][1],
+                        PARTY_COLORS[party][2],
+                    )
+                ) # Set background party color
+                self.ui.tableWidget_results.setItem(row, 0, party_item)
+
+                leader_item = QTableWidgetItem(
+                    f"{item.district.get_list_leader(party)}"
+                )
+                leader_item.setTextAlignment(4) # Center text
+                self.ui.tableWidget_results.setItem(row, 1, leader_item)
+
+                results_item = QTableWidgetItem(f"{round(percent, 1)}%")
+                results_item.setTextAlignment(4)
+                self.ui.tableWidget_results.setItem(
+                    row, 2, QTableWidgetItem(results_item)
+                )
+
+                mandates_item = QTableWidgetItem(f"{parties_mandates[party]}")
+                mandates_item.setTextAlignment(4)
+                self.ui.tableWidget_results.setItem(
+                    row, 3, QTableWidgetItem(mandates_item)
+                )
+
+                row += 1
+
     def _reset(self):
         # Reset labels
-        self.ui.label_error.setText("0")
+        self.ui.label_error.setText("")
         self.ui.label_PiS.setText("0")
         self.ui.label_KO.setText("0")
         self.ui.label_Lewica.setText("0")

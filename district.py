@@ -1,4 +1,5 @@
 import copy
+from constants import *
 
 
 class District:
@@ -8,6 +9,8 @@ class District:
         self._n_seats = int(n_seats)
         self._sum_of_votes = 0
         self._results = {}
+        self._mandates = {}
+        self._list_leaders = {}
 
         if number_of_votes is not None:
             self._sum_of_votes = number_of_votes
@@ -27,11 +30,23 @@ class District:
     def get_sum_of_votes(self):
         return self._sum_of_votes
 
-    def get_previous_results(self):
+    def get_results(self):
         return self._results
+
+    def get_list_leader(self, party):
+        return self._list_leaders[party]
+
+    def get_results_percent(self):
+        results_percent = {}
+        for party in self._results.keys():
+            results_percent[party] = self._results[party] / self._sum_of_votes * 100
+        return results_percent
 
     def set_sum_of_votes(self, number_of_votes):
         self._sum_of_votes = number_of_votes
+
+    def set_list_leader(self, party, list_leader):
+        self._list_leaders[party] = list_leader
 
     def get_number_of_votes(self, party):
         if self._results is None:
@@ -57,9 +72,9 @@ class District:
             scale = self._sum_of_votes / sum(self._results.values())
             self.scale_votes({party: scale for party in self._results})
 
-    def get_number_of_mandates_dhont(self, parties_over_threshold):
+    def calculate_number_of_mandates_dhont(self, parties_over_threshold):
         # Initialize mandates
-        mandates = {party: 0 for party in parties_over_threshold}
+        mandates = {party: 0 for party in LIST_OF_PARTIES}
 
         # Initialize last divisors
         last_divisors = {party: 1 for party in parties_over_threshold}
@@ -77,10 +92,18 @@ class District:
             results_dhont[party_max_value] = (
                 self._results[party_max_value] / last_divisors[party_max_value]
             )
-        return mandates
+
+        self._mandates = mandates
+
+    def get_number_of_mandates(self):
+        return self._mandates
 
     def save_state(self):
         self._saved_results = copy.deepcopy(self._results)
 
     def reset(self):
         self._results = copy.deepcopy(self._saved_results)
+        self._mandates = {}
+
+    def __str__(self) -> str:
+        return f"Okręg nr {self._id} ({self._name})"

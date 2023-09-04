@@ -10,6 +10,7 @@ class DistrictDatabase:
         districts_path=None,
         parlamentary2019_election_path=None,
         presidential2020_election_path=None,
+        list_leaders_path=None,
     ):
         self._districts = {}
 
@@ -17,11 +18,13 @@ class DistrictDatabase:
             districts_path is not None
             and parlamentary2019_election_path is not None
             and presidential2020_election_path is not None
+            and list_leaders_path is not None
         ):
             self.load_database(
                 districts_path,
                 parlamentary2019_election_path,
                 presidential2020_election_path,
+                list_leaders_path,
             )
 
     def load_database(
@@ -29,16 +32,20 @@ class DistrictDatabase:
         districts_path,
         parlamentary2019_election_path,
         presidential2020_election_path,
+        list_leaders_path,
     ):
         with open(districts_path, "r") as districts_file, open(
             parlamentary2019_election_path, "r"
         ) as parlamentary2019_election_file, open(
             presidential2020_election_path, "r"
-        ) as presidential2020_election_file:
+        ) as presidential2020_election_file, open(
+            list_leaders_path, "r"
+        ) as list_leaders_file:
             self._read_database_from_file(
                 districts_file,
                 parlamentary2019_election_file,
                 presidential2020_election_file,
+                list_leaders_file
             )
 
     def _read_database_from_file(
@@ -46,20 +53,22 @@ class DistrictDatabase:
         districts_file,
         parlamentary2019_election_file,
         presidential2020_election_file,
+        list_leaders_file,
     ):
-        self._read_disctricts(districts_file)
-        self._read_parlamentary_election(parlamentary2019_election_file)
+        self._load_disctricts(districts_file)
+        self._load_parlamentary_election(parlamentary2019_election_file)
         self._load_holownia(presidential2020_election_file)
+        self._load_list_leaders(list_leaders_file)
         self.save_all_districts_state()
 
-    def _read_disctricts(self, districts_file):
+    def _load_disctricts(self, districts_file):
         reader = csv.DictReader(districts_file, delimiter=";")
         for row in reader:
             self._districts[row["Numer okręgu"]] = District(
                 row["Siedziba OKW"], row["Numer okręgu"], row["Liczba mandatów"]
             )
 
-    def _read_parlamentary_election(self, parlamentary2019_election_file):
+    def _load_parlamentary_election(self, parlamentary2019_election_file):
         reader = csv.DictReader(parlamentary2019_election_file, delimiter=";")
         for row in reader:
             district_id = row["Numer okręgu"]
@@ -87,6 +96,8 @@ class DistrictDatabase:
 
             # Scale votes to 100% if they do not sum up to sum of votes
             self._districts[district_id].rescale_votes_to_100_percent()
+
+        self.calculate_number_of_mandates_in_all_districts()
 
     def _load_holownia(self, presidential2020_election_file):
         reader = csv.DictReader(presidential2020_election_file, delimiter=";")
@@ -121,6 +132,24 @@ class DistrictDatabase:
         for district in self._districts.values():
             district.rescale_votes_to_100_percent()
 
+    def _load_list_leaders(self, list_leaders_file):
+        reader = csv.DictReader(list_leaders_file, delimiter=",")
+        for row in reader:
+            district_id = row["Numer okręgu"]
+            for party in LIST_OF_PARTIES:
+                if party != "Inne":
+                    list_leader = row[party]
+                    if list_leader == "":
+                        self._districts[district_id].set_list_leader(party, "-")
+                    else:
+                        self._districts[district_id].set_list_leader(party, list_leader)
+
+    def get_district(self, id):
+        return self._districts[id]
+
+    def get_districts(self):
+        return self._districts.values()
+
     def save_all_districts_state(self):
         for district in self._districts.values():
             district.save_state()
@@ -149,9 +178,6 @@ class DistrictDatabase:
         for district in self._districts.values():
             district.scale_votes(scale_dict)
             district.rescale_votes_to_100_percent()
-
-    def get_district(self, id):
-        return self._districts[id]
 
     def simulate_poll_results(self, poll_results_percent: dict, epsilon_percent: float):
         # Poll results in absolute numbers
@@ -184,6 +210,13 @@ class DistrictDatabase:
             self.scale_results_in_all_districts(scale_dict)
             it += 1
 
+        self.calculate_number_of_mandates_in_all_districts()
+
+    def calculate_number_of_mandates_in_all_districts(self):
+        parties_over_threshold = self.get_parties_over_threshold()
+        for district in self._districts.values():
+            district.calculate_number_of_mandates_dhont(parties_over_threshold)
+
     def are_results_approx_equal(self, results1, results2, epsilon_percent):
         epsilon = epsilon_percent * self.get_sum_of_votes() / 100
         for party in LIST_OF_PARTIES:
@@ -214,12 +247,9 @@ class DistrictDatabase:
 
     def get_number_of_mandates(self):
         mandates = {party: 0 for party in LIST_OF_PARTIES}
-        parties_over_threshold = self.get_parties_over_threshold()
 
         for district in self._districts.values():
-            district_mandates = district.get_number_of_mandates_dhont(
-                parties_over_threshold
-            )
+            district_mandates = district.get_number_of_mandates()
             for party in district_mandates.keys():
                 mandates[party] += district_mandates[party]
 
