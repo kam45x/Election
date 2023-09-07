@@ -11,6 +11,8 @@ class DistrictDatabase:
         parlamentary2019_election_path=None,
         presidential2020_election_path=None,
         list_leaders_path=None,
+        population_path=None,
+        area_path=None,
     ):
         self._districts = {}
 
@@ -19,12 +21,16 @@ class DistrictDatabase:
             and parlamentary2019_election_path is not None
             and presidential2020_election_path is not None
             and list_leaders_path is not None
+            and population_path is not None
+            and area_path is not None
         ):
             self.load_database(
                 districts_path,
                 parlamentary2019_election_path,
                 presidential2020_election_path,
                 list_leaders_path,
+                population_path,
+                area_path,
             )
 
     def load_database(
@@ -33,6 +39,8 @@ class DistrictDatabase:
         parlamentary2019_election_path,
         presidential2020_election_path,
         list_leaders_path,
+        population_path,
+        area_path,
     ):
         with open(districts_path, "r") as districts_file, open(
             parlamentary2019_election_path, "r"
@@ -40,12 +48,18 @@ class DistrictDatabase:
             presidential2020_election_path, "r"
         ) as presidential2020_election_file, open(
             list_leaders_path, "r"
-        ) as list_leaders_file:
+        ) as list_leaders_file, open(
+            population_path, "r"
+        ) as population_file, open(
+            area_path, "r"
+        ) as area_file:
             self._read_database_from_file(
                 districts_file,
                 parlamentary2019_election_file,
                 presidential2020_election_file,
                 list_leaders_file,
+                population_file,
+                area_file,
             )
 
     def _read_database_from_file(
@@ -54,11 +68,14 @@ class DistrictDatabase:
         parlamentary2019_election_file,
         presidential2020_election_file,
         list_leaders_file,
+        population_file,
+        area_file,
     ):
         self._load_disctricts(districts_file)
         self._load_parlamentary_election(parlamentary2019_election_file)
         self._load_holownia(presidential2020_election_file)
         self._load_list_leaders(list_leaders_file)
+        self._load_districts_population_and_area(population_file, area_file)
         self.save_all_districts_state()
 
     def _load_disctricts(self, districts_file):
@@ -68,6 +85,7 @@ class DistrictDatabase:
                 name=row["Siedziba OKW"],
                 id=row["Numer okręgu"],
                 n_seats=int(row["Liczba mandatów"]),
+                boundaries_description=row["Opis granic"],
             )
 
     def _load_parlamentary_election(self, parlamentary2019_election_file):
@@ -158,6 +176,43 @@ class DistrictDatabase:
                         self._districts[district_id].set_list_leader(party, "-")
                     else:
                         self._districts[district_id].set_list_leader(party, list_leader)
+
+    def _load_districts_population_and_area(self, population_file, area_file):
+        # csv.DictReader does not allow to iterate over the same instance twice,
+        # so we need to write it into a list
+        population_reader = csv.DictReader(population_file, delimiter=";")
+        area_reader = csv.DictReader(area_file, delimiter=";")
+        population_data = [row for row in population_reader]
+        area_data = [row for row in area_reader]
+
+        for district in self._districts.values():
+            boundaries = district.get_boundaries_description()
+
+            if "województwo" in boundaries:
+                voivodeship = boundaries.removeprefix("województwo ")
+                for row in population_data:
+                    if voivodeship.upper() in row["Nazwa"]:
+                        district.set_population(int(row["ludność"]))
+                        break
+                for row in area_data:
+                    if voivodeship.upper() in row["Nazwa"]:
+                        district.set_area(float(row["powierzchnia"]))
+                        break
+            else:
+                district_population = 0
+                district_area = 0
+                powiats_in_district = boundaries.split(", ")
+                for powiat in powiats_in_district:
+                    for row in population_data:
+                        if powiat in row["Nazwa"]:
+                            district_population += int(row["ludność"])
+                            break
+                    for row in area_data:
+                        if powiat in row["Nazwa"]:
+                            district_area += float(row["powierzchnia"])
+                            break
+                district.set_population(district_population)
+                district.set_area(district_area)
 
     def get_district(self, id):
         return self._districts[id]

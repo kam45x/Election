@@ -3,22 +3,37 @@ from constants import *
 
 
 class District:
-    def __init__(self, name, id, n_seats, previous_results=None, number_of_votes=None):
+    def __init__(
+        self,
+        name,
+        id,
+        n_seats,
+        previous_results=None,
+        number_of_votes=None,
+        boundaries_description=None,
+    ):
         self._name = name
         self._id = id
         self._n_seats = int(n_seats)
+
+        self._boundaries_description = ""
         self._sum_of_votes = 0
         self._attendance_percent = 0
         self._votes_per_seat = 0
         self._results = {}
         self._mandates = {}
         self._list_leaders = {}
+        self._population = 0
+        self._area = 0
 
         if number_of_votes is not None:
             self._sum_of_votes = number_of_votes
 
         if previous_results is not None:
             self._results = previous_results
+
+        if boundaries_description is not None:
+            self._boundaries_description = boundaries_description
 
     def get_name(self):
         return self._name
@@ -55,6 +70,15 @@ class District:
             return 0
         return self._results[party]
 
+    def get_population(self):
+        return self._population
+
+    def get_area(self):
+        return self._area
+
+    def get_boundaries_description(self):
+        return self._boundaries_description
+
     def set_sum_of_votes(self, number_of_votes):
         self._sum_of_votes = number_of_votes
 
@@ -66,6 +90,12 @@ class District:
 
     def set_votes_per_seat(self, votes_per_seat):
         self._votes_per_seat = votes_per_seat
+
+    def set_population(self, population):
+        self._population = population
+
+    def set_area(self, area):
+        self._area = area
 
     def add_party(self, party, votes):
         self._results[party] = votes
