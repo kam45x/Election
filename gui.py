@@ -17,17 +17,23 @@ class ElectionCalculatorWindow(QMainWindow):
         super().__init__(parent)
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
-        self.database = DistrictDatabase(
-            "okregi_sejm.csv",
-            "wyniki_gl_na_listy_po_okregach_sejm.csv",
-            "districts_results_2020_AUTO.csv",
-            "jedynki.csv",
-        )
+
+        self.__init_database()
         self.__init_mandates_chart()
         self.__init_list_of_distrcits()
 
         # Monitor button click
         self.ui.pushButton.clicked.connect(self._calculate_mandates)
+
+    def __init_database(self):
+        self.database = DistrictDatabase(
+            districts_path="okregi_sejm.csv",
+            parlamentary2019_election_path="wyniki_gl_na_listy_po_okregach_sejm.csv",
+            presidential2020_election_path="districts_results_2020_AUTO.csv",
+            list_leaders_path="jedynki.csv",
+            population_path="ludnosc_2022.csv",
+            area_path="powierzchnia.csv"
+        )
 
     def __init_mandates_chart(self):
         self.scene = QGraphicsScene()

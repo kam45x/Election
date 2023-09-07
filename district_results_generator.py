@@ -17,11 +17,9 @@ class DistrictResultsGenerator:
         districts_reader = csv.DictReader(districts_file, delimiter=";")
 
         # csv.DictReader does not allow to iterate over the same instance twice,
-        # so we need to read it into a list
+        # so we need to write it into a list
         powiat_reader = csv.DictReader(powiat_results_file, delimiter=";")
-        powiat_data = []
-        for powiat_row in powiat_reader:
-            powiat_data.append(powiat_row)
+        powiat_data = [row for row in powiat_reader]
 
         districts = []
         # We need to remove non-numeric keys from powiat_row
