@@ -143,12 +143,19 @@ class ElectionCalculatorWindow(QMainWindow):
             self.ui.label_Opposition.setText(f"{mandates_Opposition}")
 
     def _select_district(self, item):
+        # Change page
         self.ui.stackedWidget.setCurrentIndex(1)
         # Set district name
-        self.ui.label_district.setText(
-            f"{item.district.get_id()}. {item.district.get_name()}"
-        )
+        self.ui.label_district.setText(f"{item.district}")
+        # Set district map
+        self.ui.label_map.setPixmap(f"images/Sejm_RP_{item.district.get_id()}.svg.png")
+        # Set map widget as default
+        self.ui.tabWidget.setCurrentWidget(self.ui.tab)
 
+        self._update_district_results_table(item)
+        self._update_district_labels(item)
+
+    def _update_district_results_table(self, item):
         n_parties = len(self.database.get_number_of_mandates())
         # Ignore "Inne" party
         self.ui.tableWidget_results.setRowCount(n_parties - 1)
@@ -172,6 +179,9 @@ class ElectionCalculatorWindow(QMainWindow):
         self.ui.tableWidget_results.setColumnWidth(1, 200)
         self.ui.tableWidget_results.setColumnWidth(2, 80)
         self.ui.tableWidget_results.setColumnWidth(3, 80)
+        # Row height
+        for i in range(n_parties - 1):
+            self.ui.tableWidget_results.setRowHeight(i, 34)
 
         row = 0
         for party, percent in parties_results_percent.items():
@@ -209,6 +219,19 @@ class ElectionCalculatorWindow(QMainWindow):
                 )
 
                 row += 1
+
+    def _update_district_labels(self, item):
+        self.ui.label_mandates.setText(f"{item.district.get_n_seats()}")
+
+        self.ui.label_attendance.setText(
+            f"{round(item.district.get_attendance_percent(), 2)}%"
+        )
+
+        relative_vote_strength = (
+            self.database.get_district("19").get_votes_per_seat()
+            / item.district.get_votes_per_seat()
+        )
+        self.ui.label_voters_per_seat.setText(f"{round(relative_vote_strength, 2)}")
 
     def _reset(self):
         # Reset labels

@@ -8,6 +8,8 @@ class District:
         self._id = id
         self._n_seats = int(n_seats)
         self._sum_of_votes = 0
+        self._attendance_percent = 0
+        self._votes_per_seat = 0
         self._results = {}
         self._mandates = {}
         self._list_leaders = {}
@@ -42,16 +44,28 @@ class District:
             results_percent[party] = self._results[party] / self._sum_of_votes * 100
         return results_percent
 
+    def get_attendance_percent(self):
+        return self._attendance_percent
+
+    def get_votes_per_seat(self):
+        return self._votes_per_seat
+
+    def get_number_of_votes(self, party):
+        if self._results is None:
+            return 0
+        return self._results[party]
+
     def set_sum_of_votes(self, number_of_votes):
         self._sum_of_votes = number_of_votes
 
     def set_list_leader(self, party, list_leader):
         self._list_leaders[party] = list_leader
 
-    def get_number_of_votes(self, party):
-        if self._results is None:
-            return 0
-        return self._results[party]
+    def set_attendance_percent(self, attendance_percent):
+        self._attendance_percent = attendance_percent
+
+    def set_votes_per_seat(self, votes_per_seat):
+        self._votes_per_seat = votes_per_seat
 
     def add_party(self, party, votes):
         self._results[party] = votes

@@ -45,7 +45,7 @@ class DistrictDatabase:
                 districts_file,
                 parlamentary2019_election_file,
                 presidential2020_election_file,
-                list_leaders_file
+                list_leaders_file,
             )
 
     def _read_database_from_file(
@@ -65,7 +65,9 @@ class DistrictDatabase:
         reader = csv.DictReader(districts_file, delimiter=";")
         for row in reader:
             self._districts[row["Numer okręgu"]] = District(
-                row["Siedziba OKW"], row["Numer okręgu"], row["Liczba mandatów"]
+                name=row["Siedziba OKW"],
+                id=row["Numer okręgu"],
+                n_seats=int(row["Liczba mandatów"]),
             )
 
     def _load_parlamentary_election(self, parlamentary2019_election_file):
@@ -76,6 +78,19 @@ class DistrictDatabase:
             # Set sum of votes
             self._districts[district_id].set_sum_of_votes(
                 int(row["Liczba głosów ważnych"])
+            )
+
+            # Set attendance
+            self._districts[district_id].set_attendance_percent(
+                int(row["Liczba wyborców, którym wydano karty do głosowania"])
+                / int(row["Liczba wyborców uprawnionych do głosowania"])
+                * 100
+            )
+
+            # Set votes per seat
+            self._districts[district_id].set_votes_per_seat(
+                int(row["Liczba głosów ważnych"])
+                / self._districts[district_id].get_n_seats()
             )
 
             # Add votes for each party
