@@ -325,6 +325,38 @@ class DistrictDatabase:
 
         return mandates
 
+    # Implement Flis formula
+    def get_number_of_mandates_flis(self, poll_results_percent):
+        mandates = {party: 0 for party in LIST_OF_PARTIES}
+        parties_over_threshold = []
+        wasted_votes_percent = 0.0
+
+        for party, percent in poll_results_percent.items():
+            if (
+                (party == "TD" and percent <= COALITION_TRESHOLD)
+                or party == "Inne"
+                or percent <= PARTY_TRESHOLD
+            ):
+                wasted_votes_percent += percent
+            else:
+                # MN should not be counted in Flis formula
+                if party != "MN":
+                    parties_over_threshold.append(party)
+
+        for party in parties_over_threshold:
+            n_parties_over_threshold = len(parties_over_threshold)
+            mandates[party] = round(
+                (
+                    (460 + 41 * n_parties_over_threshold / 2)
+                    * poll_results_percent[party]
+                    / (100 - wasted_votes_percent)
+                    - 41 / 2
+                ),
+                1
+            )
+
+        return mandates
+
     def get_mandates_of_parties(self, parties):
         mandates_parties = 0
 

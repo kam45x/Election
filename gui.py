@@ -16,6 +16,7 @@ class ElectionCalculatorWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._is_user_data_proper = False
+        self._is_main_scenario = True
 
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
@@ -65,6 +66,7 @@ class ElectionCalculatorWindow(QMainWindow):
         self._reset_party_labels()
         self._is_user_data_proper = True
 
+        # Check if user data is not empty
         if self._is_all_user_data_zeroes():
             self.ui.label_error.setText(
                 "<b><font color='red'>BŁĄD: Wprowadź jakieś wyniki!<b></font>"
@@ -88,6 +90,7 @@ class ElectionCalculatorWindow(QMainWindow):
             self._error_action()
             return
 
+        # Check if all values are non-negative
         for percent in poll_results_percent.values():
             if percent < 0:
                 self.ui.label_error.setText(
@@ -102,6 +105,7 @@ class ElectionCalculatorWindow(QMainWindow):
         )
         self.ui.textBrowser.setText(f"{round(poll_results_percent['Inne'], 1)}")
 
+        # Check if sum is not larger than 100% (plus MN)
         if poll_results_percent["Inne"] < 0:
             self.ui.label_error.setText(
                 "<b><font color='red'>BŁĄD: Suma przekracza 100%!<b></font>"
@@ -109,28 +113,30 @@ class ElectionCalculatorWindow(QMainWindow):
             self._error_action()
             return
 
-        self.database.simulate_poll_results(poll_results_percent, 0.01)
+        # Calculate mandates
+        if self.ui.radioButton_mainScenario.isChecked():
+            self._is_main_scenario = True
+            self.database.simulate_poll_results(poll_results_percent, 0.01)
+            mandates = self.database.get_number_of_mandates()
+        elif self.ui.radioButton_flis.isChecked():
+            self._is_main_scenario = False
+            mandates = self.database.get_number_of_mandates_flis(poll_results_percent)
 
-        self._update_mandates_chart()
-        self._update_mandate_labels()
+        # Update
+        self._update_mandates_chart(mandates)
+        self._update_mandate_labels(mandates)
+        self._update_districts_info()
 
-        # Update district info
-        if self._is_user_data_proper:
-            if self.ui.districts.currentItem() is not None:
-                self._select_district(self.ui.districts.currentItem())
-        else:
-            self._reset_stacked_widget()
-
-    def _update_mandates_chart(self):
+    def _update_mandates_chart(self, party_mandates):
         parties = []
-        mandates = []
+        chart_mandates = []
 
-        for party, mandates_ in self.database.get_number_of_mandates().items():
+        for party, n_mandates in party_mandates.items():
             if party != "Inne":
                 parties.append(party)
-                mandates.append(mandates_)
+                chart_mandates.append(n_mandates)
 
-        self.ax.bar(parties, mandates)
+        self.ax.bar(parties, chart_mandates)
         self.canvas = FigureCanvas(self.figure)
         self.proxy = QGraphicsProxyWidget()
         self.proxy.setWidget(self.canvas)
@@ -141,30 +147,22 @@ class ElectionCalculatorWindow(QMainWindow):
         )
         self.scene.addItem(self.proxy)
 
-    def _update_mandate_labels(self):
-        self.ui.label_PiS.setText(
-            f"<font color='blue'>{self.database.get_number_of_mandates()['PiS']}</font>"
-        )
-        self.ui.label_KO.setText(
-            f"<font color='orange'>{self.database.get_number_of_mandates()['KO']}</font>"
-        )
-        self.ui.label_Lewica.setText(
-            f"<font color='red'>{self.database.get_number_of_mandates()['Lewica']}</font>"
-        )
-        self.ui.label_TD.setText(
-            f"<font color='green'>{self.database.get_number_of_mandates()['TD']}</font>"
-        )
-        self.ui.label_Konfederacja.setText(
-            f"{self.database.get_number_of_mandates()['Konfederacja']}"
-        )
-        self.ui.label_MN.setText(
-            f"<font color='grey'>{self.database.get_number_of_mandates()['MN']}</font>"
-        )
+    def _update_mandate_labels(self, mandates):
+        self.ui.label_PiS.setText(f"<font color='blue'>{mandates['PiS']}</font>")
+        self.ui.label_KO.setText(f"<font color='orange'>{mandates['KO']}</font>")
+        self.ui.label_Lewica.setText(f"<font color='red'>{mandates['Lewica']}</font>")
+        self.ui.label_TD.setText(f"<font color='green'>{mandates['TD']}</font>")
+        self.ui.label_Konfederacja.setText(f"{mandates['Konfederacja']}")
+        self.ui.label_MN.setText(f"<font color='grey'>{mandates['MN']}</font>")
 
-        mandates_PiSKonfederacja = self.database.get_mandates_of_parties(
-            PIS_KONFEDERACJA
-        )
-        mandates_Opposition = self.database.get_mandates_of_parties(OPPOSITION)
+        mandates_PiSKonfederacja = 0
+        mandates_Opposition = 0
+
+        for party in mandates:
+            if party in PIS_KONFEDERACJA:
+                mandates_PiSKonfederacja += mandates[party]
+            elif party in OPPOSITION:
+                mandates_Opposition += mandates[party]
 
         # Check majority of mandates
         if mandates_PiSKonfederacja > 230:
@@ -177,14 +175,23 @@ class ElectionCalculatorWindow(QMainWindow):
         else:
             self.ui.label_Opposition.setText(f"{mandates_Opposition}")
 
+    def _update_districts_info(self):
+        if self._is_user_data_proper and self._is_main_scenario:
+            if self.ui.districts.currentItem() is not None:
+                self._select_district(self.ui.districts.currentItem())
+        else:
+            self._reset_stacked_widget()
+
     def _select_district(self, item):
-        if self._is_user_data_proper:
+        if self._is_user_data_proper and self._is_main_scenario:
             # Change page
             self.ui.stackedWidget.setCurrentIndex(1)
             # Set district name
             self.ui.label_district.setText(f"{item.district}")
             # Set district map
-            self.ui.label_map.setPixmap(f"images/Sejm_RP_{item.district.get_id()}.svg.png")
+            self.ui.label_map.setPixmap(
+                f"images/Sejm_RP_{item.district.get_id()}.svg.png"
+            )
 
             self._update_district_results_table(item)
             self._update_district_labels(item)
