@@ -196,7 +196,7 @@ class DistrictDatabase:
                         break
                 for row in area_data:
                     if voivodeship.upper() in row["Nazwa"]:
-                        district.set_area(float(row["powierzchnia"]))
+                        district.set_area(int(row["powierzchnia"]))
                         break
             else:
                 district_population = 0
@@ -209,7 +209,7 @@ class DistrictDatabase:
                             break
                     for row in area_data:
                         if powiat in row["Nazwa"]:
-                            district_area += float(row["powierzchnia"])
+                            district_area += int(row["powierzchnia"])
                             break
                 district.set_population(district_population)
                 district.set_area(district_area)

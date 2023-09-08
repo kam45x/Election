@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 class ElectionCalculatorWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._is_user_data_proper = False
+
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
 
@@ -22,6 +24,8 @@ class ElectionCalculatorWindow(QMainWindow):
         self.__init_mandates_chart()
         self.__init_list_of_distrcits()
 
+        # Set map widget as default
+        self.ui.tabWidget.setCurrentWidget(self.ui.tab)
         # Monitor button click
         self.ui.pushButton.clicked.connect(self._calculate_mandates)
 
@@ -32,7 +36,7 @@ class ElectionCalculatorWindow(QMainWindow):
             presidential2020_election_path="districts_results_2020_AUTO.csv",
             list_leaders_path="jedynki.csv",
             population_path="ludnosc_2022.csv",
-            area_path="powierzchnia.csv"
+            area_path="powierzchnia.csv",
         )
 
     def __init_mandates_chart(self):
@@ -58,7 +62,15 @@ class ElectionCalculatorWindow(QMainWindow):
         self.ui.districts.itemClicked.connect(self._select_district)
 
     def _calculate_mandates(self):
-        self._reset()
+        self._reset_party_labels()
+        self._is_user_data_proper = True
+
+        if self._is_all_user_data_zeroes():
+            self.ui.label_error.setText(
+                "<b><font color='red'>BŁĄD: Wprowadź jakieś wyniki!<b></font>"
+            )
+            self._error_action()
+            return
 
         try:
             poll_results_percent = {
@@ -73,7 +85,16 @@ class ElectionCalculatorWindow(QMainWindow):
             self.ui.label_error.setText(
                 "<b><font color='red'>BŁĄD: Wprowadź poprawne wartości!<b></font>"
             )
+            self._error_action()
             return
+
+        for percent in poll_results_percent.values():
+            if percent < 0:
+                self.ui.label_error.setText(
+                    "<b><font color='red'>BŁĄD: Wprowadź nieujemne wartości!<b></font>"
+                )
+                self._error_action()
+                return
 
         # Sum can be larger than 100% (because of MN) - it wil be rescaled
         poll_results_percent["Inne"] = (
@@ -85,12 +106,20 @@ class ElectionCalculatorWindow(QMainWindow):
             self.ui.label_error.setText(
                 "<b><font color='red'>BŁĄD: Suma przekracza 100%!<b></font>"
             )
+            self._error_action()
             return
 
         self.database.simulate_poll_results(poll_results_percent, 0.01)
 
         self._update_mandates_chart()
         self._update_mandate_labels()
+
+        # Update district info
+        if self._is_user_data_proper:
+            if self.ui.districts.currentItem() is not None:
+                self._select_district(self.ui.districts.currentItem())
+        else:
+            self._reset_stacked_widget()
 
     def _update_mandates_chart(self):
         parties = []
@@ -149,17 +178,16 @@ class ElectionCalculatorWindow(QMainWindow):
             self.ui.label_Opposition.setText(f"{mandates_Opposition}")
 
     def _select_district(self, item):
-        # Change page
-        self.ui.stackedWidget.setCurrentIndex(1)
-        # Set district name
-        self.ui.label_district.setText(f"{item.district}")
-        # Set district map
-        self.ui.label_map.setPixmap(f"images/Sejm_RP_{item.district.get_id()}.svg.png")
-        # Set map widget as default
-        self.ui.tabWidget.setCurrentWidget(self.ui.tab)
+        if self._is_user_data_proper:
+            # Change page
+            self.ui.stackedWidget.setCurrentIndex(1)
+            # Set district name
+            self.ui.label_district.setText(f"{item.district}")
+            # Set district map
+            self.ui.label_map.setPixmap(f"images/Sejm_RP_{item.district.get_id()}.svg.png")
 
-        self._update_district_results_table(item)
-        self._update_district_labels(item)
+            self._update_district_results_table(item)
+            self._update_district_labels(item)
 
     def _update_district_results_table(self, item):
         n_parties = len(self.database.get_number_of_mandates())
@@ -227,6 +255,18 @@ class ElectionCalculatorWindow(QMainWindow):
                 row += 1
 
     def _update_district_labels(self, item):
+        # Display big cities in district
+        boundaries_text = ""
+        boundaries_powiats = item.district.get_boundaries_description().split(", ")
+        if len(boundaries_powiats) > 1:
+            for powiat in boundaries_powiats:
+                if powiat[0].isupper():
+                    boundaries_text += f"{powiat}, "
+            boundaries_text = boundaries_text.removesuffix(", ")
+        else:
+            boundaries_text = boundaries_powiats[0]
+        self.ui.label_boundaries.setText(boundaries_text)
+
         self.ui.label_mandates.setText(f"{item.district.get_n_seats()}")
 
         self.ui.label_attendance.setText(
@@ -239,7 +279,31 @@ class ElectionCalculatorWindow(QMainWindow):
         )
         self.ui.label_voters_per_seat.setText(f"{round(relative_vote_strength, 2)}")
 
-    def _reset(self):
+        self.ui.label_population.setText(
+            f"{int(item.district.get_population() / 1000)} tys."
+        )
+        self.ui.label_area.setText(f"{item.district.get_area()} km2")
+        self.ui.label_density.setText(
+            f"{int(item.district.get_population() / item.district.get_area())} os./km2"
+        )
+
+        self.ui.label_popmandate.setText(
+            f"{round((item.district.get_population() / item.district.get_n_seats()) / 1000, 1)} tys."
+        )
+
+    def _is_all_user_data_zeroes(self):
+        return (
+            self.ui.lineEdit_PiS.text() == "0"
+            and self.ui.lineEdit_KO.text() == "0"
+            and self.ui.lineEdit_Lewica.text() == "0"
+            and self.ui.lineEdit_TD.text() == "0"
+            and self.ui.lineEdit_Konfederacja.text() == "0"
+        )
+
+    def _reset_stacked_widget(self):
+        self.ui.stackedWidget.setCurrentIndex(0)
+
+    def _reset_party_labels(self):
         # Reset labels
         self.ui.label_error.setText("")
         self.ui.label_PiS.setText("0")
@@ -257,6 +321,10 @@ class ElectionCalculatorWindow(QMainWindow):
 
         # Reset database
         self.database.reset_all_districts_state()
+
+    def _error_action(self):
+        self._is_user_data_proper = False
+        self._reset_stacked_widget()
 
 
 def guiMain(args):
