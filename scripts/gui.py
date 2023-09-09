@@ -31,12 +31,12 @@ class ElectionCalculatorWindow(QMainWindow):
 
     def __init_database(self):
         self.database = DistrictDatabase(
-            districts_path="okregi_sejm.csv",
-            parlamentary2019_election_path="wyniki_gl_na_listy_po_okregach_sejm.csv",
-            presidential2020_election_path="districts_results_2020_AUTO.csv",
-            list_leaders_path="jedynki.csv",
-            population_path="ludnosc_2022.csv",
-            area_path="powierzchnia.csv",
+            districts_path="./data/okregi_sejm.csv",
+            parlamentary2019_election_path="./data/wyniki_gl_na_listy_po_okregach_sejm.csv",
+            presidential2020_election_path="./data/districts_results_2020_AUTO.csv",
+            list_leaders_path="./data/jedynki.csv",
+            population_path="./data/ludnosc_2022.csv",
+            area_path="./data/powierzchnia.csv",
         )
 
     def __init_mandates_chart(self):
@@ -189,7 +189,7 @@ class ElectionCalculatorWindow(QMainWindow):
             self.ui.label_district.setText(f"{item.district}")
             # Set district map
             self.ui.label_map.setPixmap(
-                f"images/Sejm_RP_{item.district.get_id()}.svg.png"
+                f"./images/Sejm_RP_{item.district.get_id()}.svg.png"
             )
 
             self._update_district_results_table(item)
