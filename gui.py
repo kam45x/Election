@@ -1,8 +1,7 @@
-from PySide2.QtWidgets import QApplication, QMainWindow, QListWidgetItem
+from PySide2.QtWidgets import QMainWindow, QListWidgetItem
 from PySide2.QtWidgets import QGraphicsScene, QGraphicsProxyWidget
 from PySide2.QtWidgets import QTableWidgetItem
 from PySide2.QtGui import QColor, QFont
-import sys
 
 from ui_election_calculator import Ui_MainWindow
 from district_database import DistrictDatabase
@@ -332,14 +331,3 @@ class ElectionCalculatorWindow(QMainWindow):
     def _error_action(self):
         self._is_user_data_proper = False
         self._reset_stacked_widget()
-
-
-def guiMain(args):
-    app = QApplication(args)
-    window = ElectionCalculatorWindow()
-    window.show()
-    return app.exec_()
-
-
-if __name__ == "__main__":
-    guiMain(sys.argv)
