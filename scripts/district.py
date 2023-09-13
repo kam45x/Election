@@ -1,5 +1,4 @@
 import copy
-from constants import *
 
 
 class District:
@@ -112,13 +111,14 @@ class District:
     # If votes for all parties do not sum up to sum of votes,
     # which was set, scale them
     def rescale_votes_to_100_percent(self):
-        if self._sum_of_votes > 0:
+        if self._sum_of_votes > 0 and sum(self._results.values()) != self._sum_of_votes:
+            # print(f"{self._name}: {sum(self._results.values())} != {self._sum_of_votes}")
             scale = self._sum_of_votes / sum(self._results.values())
             self.scale_votes({party: scale for party in self._results})
 
     def calculate_number_of_mandates_dhont(self, parties_over_threshold):
         # Initialize mandates
-        mandates = {party: 0 for party in LIST_OF_PARTIES}
+        mandates = {party: 0 for party in self._results.keys()}
 
         # Initialize last divisors
         last_divisors = {party: 1 for party in parties_over_threshold}
@@ -130,7 +130,17 @@ class District:
 
         # Calculate number of mandates
         for i in range(self._n_seats):
-            party_max_value = max(results_dhont, key=results_dhont.get)
+            max_value = max(results_dhont.values())
+            party_max_values = [
+                key for key, value in results_dhont.items() if value == max_value
+            ]
+            if len(party_max_values) == 1:
+                party_max_value = party_max_values[0]
+            else:
+                # If there are more than one party with the same number of votes
+                # choose the one with the higher number of votes
+                party_max_value = max(party_max_values, key=lambda x: self._results[x])
+
             mandates[party_max_value] += 1
             last_divisors[party_max_value] += 1
             results_dhont[party_max_value] = (

@@ -4,6 +4,13 @@ from district import District
 from constants import *
 
 
+# Exception raised when max iterations in simulate_poll_results() is reached
+class MaxIterationsError(Exception):
+    def __init__(self, max_iterations):
+        self.max_iterations = max_iterations
+        super().__init__(f"Maximum iterations ({max_iterations}) reached at iteration")
+
+
 class DistrictDatabase:
     def __init__(
         self,
@@ -13,6 +20,7 @@ class DistrictDatabase:
         list_leaders_path=None,
         population_path=None,
         area_path=None,
+        load_holownia=True
     ):
         self._districts = {}
 
@@ -31,6 +39,7 @@ class DistrictDatabase:
                 list_leaders_path,
                 population_path,
                 area_path,
+                load_holownia
             )
 
     def load_database(
@@ -41,6 +50,7 @@ class DistrictDatabase:
         list_leaders_path,
         population_path,
         area_path,
+        load_holownia
     ):
         with open(districts_path, "r") as districts_file, open(
             parlamentary2019_election_path, "r"
@@ -60,6 +70,7 @@ class DistrictDatabase:
                 list_leaders_file,
                 population_file,
                 area_file,
+                load_holownia
             )
 
     def _read_database_from_file(
@@ -70,10 +81,12 @@ class DistrictDatabase:
         list_leaders_file,
         population_file,
         area_file,
+        load_holownia
     ):
         self._load_disctricts(districts_file)
         self._load_parlamentary_election(parlamentary2019_election_file)
-        self._load_holownia(presidential2020_election_file)
+        if load_holownia:
+            self._load_holownia(presidential2020_election_file)
         self._load_list_leaders(list_leaders_file)
         self._load_districts_population_and_area(population_file, area_file)
         self.save_all_districts_state()
@@ -244,6 +257,13 @@ class DistrictDatabase:
                 results[party] += district.get_number_of_votes(party)
         return results
 
+    def get_results_percent(self):
+        results_percent = {}
+        sum_of_votes = self.get_sum_of_votes()
+        for party, votes in self.get_current_overall_results().items():
+            results_percent[party] = votes / sum_of_votes * 100
+        return results_percent
+
     def scale_results_in_all_districts(self, scale_dict):
         for district in self._districts.values():
             district.scale_votes(scale_dict)
@@ -279,6 +299,9 @@ class DistrictDatabase:
 
             self.scale_results_in_all_districts(scale_dict)
             it += 1
+
+        if it == MAX_ITERATIONS:
+            raise MaxIterationsError(MAX_ITERATIONS)
 
         self.calculate_number_of_mandates_in_all_districts()
 
@@ -321,7 +344,10 @@ class DistrictDatabase:
         for district in self._districts.values():
             district_mandates = district.get_number_of_mandates()
             for party in district_mandates.keys():
-                mandates[party] += district_mandates[party]
+                if party in mandates.keys():
+                    mandates[party] += district_mandates[party]
+                else:
+                    mandates[party] = district_mandates[party]
 
         return mandates
 
@@ -345,23 +371,16 @@ class DistrictDatabase:
 
         for party in parties_over_threshold:
             n_parties_over_threshold = len(parties_over_threshold)
-            mandates[party] = round(
-                (
-                    (460 + 41 * n_parties_over_threshold / 2)
-                    * poll_results_percent[party]
-                    / (100 - wasted_votes_percent)
-                    - 41 / 2
-                ),
-                1
+            mandates[party] = int(
+                round(
+                    (
+                        (460 + 41 * n_parties_over_threshold / 2)
+                        * poll_results_percent[party]
+                        / (100 - wasted_votes_percent)
+                        - 41 / 2
+                    ),
+                    0,
+                )
             )
 
         return mandates
-
-    def get_mandates_of_parties(self, parties):
-        mandates_parties = 0
-
-        for party, mandates in self.get_number_of_mandates().items():
-            if party in parties:
-                mandates_parties += mandates
-
-        return mandates_parties

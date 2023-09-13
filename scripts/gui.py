@@ -115,7 +115,7 @@ class ElectionCalculatorWindow(QMainWindow):
         # Calculate mandates
         if self.ui.radioButton_mainScenario.isChecked():
             self._is_main_scenario = True
-            self.database.simulate_poll_results(poll_results_percent, 0.01)
+            self.database.simulate_poll_results(poll_results_percent, 0.1)
             mandates = self.database.get_number_of_mandates()
         elif self.ui.radioButton_flis.isChecked():
             self._is_main_scenario = False
@@ -226,7 +226,12 @@ class ElectionCalculatorWindow(QMainWindow):
         row = 0
         for party, percent in parties_results_percent.items():
             if party != "Inne":
-                party_item = QTableWidgetItem(f"{party}")
+                # Asterisks for parties below threshold
+                if party in self.database.get_parties_over_threshold():
+                    party_item = QTableWidgetItem(f"{party}")
+                else:
+                    party_item = QTableWidgetItem(f"{party} *")
+
                 # Bold font for party name
                 font = QFont()
                 font.setBold(True)
