@@ -20,7 +20,7 @@ class DistrictDatabase:
         list_leaders_path=None,
         population_path=None,
         area_path=None,
-        load_holownia=True
+        load_holownia=True,
     ):
         self._districts = {}
 
@@ -39,7 +39,7 @@ class DistrictDatabase:
                 list_leaders_path,
                 population_path,
                 area_path,
-                load_holownia
+                load_holownia,
             )
 
     def load_database(
@@ -50,7 +50,7 @@ class DistrictDatabase:
         list_leaders_path,
         population_path,
         area_path,
-        load_holownia
+        load_holownia,
     ):
         with open(districts_path, "r") as districts_file, open(
             parlamentary2019_election_path, "r"
@@ -70,7 +70,7 @@ class DistrictDatabase:
                 list_leaders_file,
                 population_file,
                 area_file,
-                load_holownia
+                load_holownia,
             )
 
     def _read_database_from_file(
@@ -81,7 +81,7 @@ class DistrictDatabase:
         list_leaders_file,
         population_file,
         area_file,
-        load_holownia
+        load_holownia,
     ):
         self._load_disctricts(districts_file)
         self._load_parlamentary_election(parlamentary2019_election_file)
@@ -352,6 +352,10 @@ class DistrictDatabase:
         return mandates
 
     # Implement Flis formula
+    # Based on:
+    # Jarosław Flis, Wojciech Słomczyński,	Dariusz Stolicki; (2019);
+    # "Kociołek i chochelka: formuła szacowania rozkładu mandatów metodą Jeffersona-D’Hondta" [online],
+    # http://cejsh.icm.edu.pl/cejsh/element/bwmeta1.element.ojs-doi-10_7206_DEC_1733-0092_129 (accessed 2023-09-26)
     def get_number_of_mandates_flis(self, poll_results_percent):
         mandates = {party: 0 for party in LIST_OF_PARTIES}
         parties_over_threshold = []
@@ -359,9 +363,9 @@ class DistrictDatabase:
 
         for party, percent in poll_results_percent.items():
             if (
-                (party == "TD" and percent <= COALITION_TRESHOLD)
+                (party == "TD" and percent <= COALITION_TRESHOLD * 100)
                 or party == "Inne"
-                or percent <= PARTY_TRESHOLD
+                or percent <= PARTY_TRESHOLD * 100
             ):
                 wasted_votes_percent += percent
             else:
